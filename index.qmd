@@ -1,0 +1,94 @@
+---
+title: "Climate Analysis for Brunei"
+author: Alvin Bong
+format: 
+  html:
+    embed-resources: true
+    number-sections: true
+    cross-ref: true
+    toc: true
+    toc-depth: 2
+    toc-location: left
+    code-links:
+      - text: Github Repo
+        icon: github
+        href: https://github.com/alvinbjl/brunei-climate
+      - text: R Script
+        href: https://github.com/alvinbjl/brune-climate/blob/main/sourcecode.R
+---
+
+# Research Question
+
+Climate change has been prevalent worldwide, causing adverse effects felt by all. It would be interesting to explore:
+
+-   How has Brunei's temperature evolved over time, and is this consistent with global temperature trends?
+-   Using PCA to interpret these trends?
+
+# Data Collection and Preprocessing
+
+Dataset is sourced from NASA POWER API accessed using nasapower package in R. Available data ranged from year 1981 to 2023. Code as follow:
+
+```{r include=FALSE}
+library(nasapower)
+library(tidyverse)
+library(plotly)
+library(ggplot2)
+library(forecast)
+library(tsibble)
+library(lubridate)
+library(stringr)
+```
+
+```{r}
+t2m <- get_power(
+  community = "re",
+  lonlat = c(114.9, 4.9),
+  pars = "T2M",
+  dates = c("1981-01-01", "2023-12-31"),
+  temporal_api = "monthly"
+)
+```
+
+```{r include=FALSE}
+t2m <-
+  t2m %>% 
+    pivot_longer(
+      cols = 5:16,
+      names_to = "MONTH"
+    ) %>% 
+    select(-ANN, -LON, -LAT)
+
+t2m$DATE <- ymd(paste(t2m$YEAR, t2m$MONTH, "01"))
+
+# COnver MONTH to Month
+t2m$MONTH <- str_to_title(t2m$MONTH)
+
+# Convert MONTH to a factor with the correct order 
+t2m$MONTH <- factor(t2m$MONTH, levels = month.abb)
+```
+
+# Exploratory Data Analysis (EDA)
+
+```{r}
+viz <-
+  ggplot(t2m, aes(x = DATE, y = value)) +
+    geom_line(col = "blue") + 
+    labs(
+      title = "Brunei BSB Monthly Temperature",
+      x = "Date",
+      y = "Temperature (°C)"
+    ) +
+    theme_minimal()
+ggplotly(viz)
+```
+
+Most of extreme temperature falls in the month of May. Does this mean mid year is the hottest in Brunei? Does these period of extreme temperature correlate with Elnino effect?
+
+![t2m Trendline](images/t2m-trendline.jpeg){#fig-t2m-trendline}
+
+Applying linear regression, it is suggested that temperature increase by 0.018°C. Despite seeming negligible, this correspond to 0.9°C over 50 years!
+
+```{r}
+lm_temp <- lm(value ~ YEAR, data = t2m)
+summary(lm_temp)
+```
