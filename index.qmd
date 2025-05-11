@@ -1,5 +1,5 @@
 ---
-title: "Data Analysis on Brunei's Climate (Temperature)"
+title: "Understanding Brunei's Climate Through Air Temperature Data (Ongoing Project)"
 author: Alvin Bong
 format: 
   html:
@@ -16,18 +16,30 @@ format:
       - text: R Script
         href: https://github.com/alvinbjl/brune-climate/blob/main/sourcecode.R
 ---
+# To do
+- Trend Analysis: Check linear regression conditions are met
+- Extreme events: Try plotting anomalies (to determine periodicity, spectrum analysis)
+- Check if there is any raw data
+- Correlation analysis with Nino. index
+- Explore EOF/PCA. Probably need more variables
+
+✅ Feel lack rigor/indepth analysis, mostly EDA for now, consult Dr. Haziq for advice. <br>
+    Advice: Since interdiscipline field, need to consult geography background experts, to check if I am asking the right questions.<br>
+✅ Discussed with  senior Amir  on his project outline with his similar ongoing project on rainfall analysis. 
 
 # Research Question
 
-Climate change has been prevalent worldwide, causing adverse effects felt by all. It would be interesting to explore:
+Climate change has been prevalent worldwide, causing adverse effects felt by all. Given temperature being one of the most important indicators of climate change, it would be interesting to explore:
 
 -   How has Brunei's temperature evolved over time?
 -   Is this consistent with global temperature trends?
 -   How temperature varies by month?
 
 # Data Collection and Cleaning
+
 ## Data Collection
-The dataset is sourced from NASA POWER API using `{nasapower}` package in R, covering years 1981 to 2023.
+
+The dataset is sourced from [`NASA POWER API`](https://power.larc.nasa.gov/) using `{nasapower}` package in R, covering years 1981 to 2023.
 
 ```{r include=FALSE}
 library(nasapower)
@@ -53,7 +65,8 @@ df <- get_power(
 write.csv(df, "brunei_temp.csv", row.names = FALSE)
 ```
 
-##  Cleaning
+## Cleaning
+
 ```{r}
 #| warning: false
 df <- read_csv("brunei_temp.csv")
@@ -68,9 +81,10 @@ t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
 ```
 
 ## Variable of interest
+
 NASA provides two temperature-related variables: `T2M` (temperature at 2 meters) and `TS` (surface temperature). A comparison shows that both are highly correlated, making one sufficient for analysis. Since `T2M` better represents the temperature experienced by a person, this project uses `T2M`. However, using `TS` would likely yield similar results.
 
-``` {r}
+```{r}
 #| warning: false
 #| code-fold: true
 ggplot(df, aes(x = T2M, y = TS)) +
@@ -85,7 +99,9 @@ ggplot(df, aes(x = T2M, y = TS)) +
 ```
 
 # Findings
+
 ## Trend Analysis
+
 From the initial plot (@fig-brn-temp), surface temperature appears relatively stable over the years. However, applying linear regression estimates a gradual temperature increase of 0.018°C per year. While this may seem negligible, it amounts to approximately **0.9°C over a 50-year period**.
 
 ```{r, echo=FALSE}
@@ -105,6 +121,7 @@ ggplotly(viz)
 ```
 
 <br>
+
 ```{r}
 lm_temp <- lm(T2M ~ YEAR, data = df)
 summary(lm_temp)
@@ -123,6 +140,7 @@ plot(decompose(t2m_ts))
 Scholars argue that linear regression may not always be suitable for time series data, especially when strong stochastic trends or autocorrelation are present. However, our data exhibits stable seasonal cycles and randomness (@fig-t2m-decomp). Since a moving average is expected to produce a similar trend, we use linear regression for simplicity while acknowledging its limitations.
 
 ## Extreme Events
+
 From @fig-brn-temp-year, we observe temperature peaks in 1998 and 2023. This aligns with the El Niño cycle, indicating that Brunei is not immune to extreme weather events. Globally, both 1998 and 2023 were marked by extreme temperature anomalies, with both years experiencing record heat.
 
 ```{r}
@@ -153,6 +171,7 @@ ggplotly(p)
 ```
 
 ## Month Distribution
+
 The following is the temperature distribution by months over the 40-year period. We see that temperature is hotter in mid year and cools off towards year and and start of new year.
 
 ```{r}
@@ -162,13 +181,15 @@ boxplot(t2m_ts ~ cycle(t2m_ts), names = month.abb,
 ```
 
 # Conclusion
+
 This project can be summarised in three main points:
 
-- Temperature is gradually increasing in Brunei.
+-   Temperature is gradually increasing in Brunei.
 
-- Brunei is not immune to El Niño effects. Extreme heat in 1998 & 2023 (aligning with global anomalies)
+-   Brunei is not immune to El Niño effects. Extreme heat in 1998 & 2023 (aligning with global anomalies)
 
-- May is the hottest month in Brunei.
+-   May is the hottest month in Brunei.
 
 # Acknowledgements
+
 The author expresses gratitude to NASA POWER for the data used in the project.
