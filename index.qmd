@@ -16,16 +16,19 @@ format:
       - text: R Script
         href: https://github.com/alvinbjl/brune-climate/blob/main/sourcecode.R
 ---
-# To do
-- Trend Analysis: Check linear regression conditions are met
+To do: <br>
+
+- Check if there is any raw data. Add information on data and location of data.
+
 - Extreme events: Try plotting anomalies (to determine periodicity, spectrum analysis)
-- Check if there is any raw data
+
 - Correlation analysis with Nino. index
+
 - Explore EOF/PCA. Probably need more variables
 
 ✅ Feel lack rigor/indepth analysis, mostly EDA for now, consult Dr. Haziq for advice. <br>
     Advice: Since interdiscipline field, need to consult geography background experts, to check if I am asking the right questions.<br>
-✅ Discussed with  senior Amir  on his project outline with his similar ongoing project on rainfall analysis. 
+✅ Discussed with  senior Amir , gained ideas on  project outline (similar to his ongoing project on rainfall analysis.)
 
 # Research Question
 
@@ -38,7 +41,6 @@ Climate change has been prevalent worldwide, causing adverse effects felt by all
 # Data Collection and Cleaning
 
 ## Data Collection
-
 The dataset is sourced from [`NASA POWER API`](https://power.larc.nasa.gov/) using `{nasapower}` package in R, covering years 1981 to 2023.
 
 ```{r include=FALSE}
@@ -65,7 +67,7 @@ df <- get_power(
 write.csv(df, "brunei_temp.csv", row.names = FALSE)
 ```
 
-## Cleaning
+## Data Wrangling
 
 ```{r}
 #| warning: false
@@ -84,9 +86,8 @@ t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
 
 NASA provides two temperature-related variables: `T2M` (temperature at 2 meters) and `TS` (surface temperature). A comparison shows that both are highly correlated, making one sufficient for analysis. Since `T2M` better represents the temperature experienced by a person, this project uses `T2M`. However, using `TS` would likely yield similar results.
 
-```{r}
+```{r, echo=FALSE}
 #| warning: false
-#| code-fold: true
 ggplot(df, aes(x = T2M, y = TS)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, color = "blue") +
@@ -98,16 +99,33 @@ ggplot(df, aes(x = T2M, y = TS)) +
   theme_minimal()
 ```
 
-# Findings
+# EDA
 
-## Trend Analysis
+## Monthly Distribution
 
-From the initial plot (@fig-brn-temp), surface temperature appears relatively stable over the years. However, applying linear regression estimates a gradual temperature increase of 0.018°C per year. While this may seem negligible, it amounts to approximately **0.9°C over a 50-year period**.
+From @fig-box-plt, we see that temperature are highest from April to September, with a peak in May, indicating the warmest part of the year. A general cooling trend is observed in the last quarter of the year, with an abrupt temperature drop from December to January. This marks the transition into the coolest part of the year, spanning January to March. During this three months, the average temperature drops below 27°C. 
+
+Another significant observation is that the Range and Interquartile Range (IQR) seems widest in November and January, suggesting higher variability and less consistent temperatures during these months. This could indicate transitional weather patterns.
+
+```{r, echo=FALSE}
+#| label: fig-box-plt
+boxplot(t2m_ts ~ cycle(t2m_ts), names = month.abb, 
+        xlab = NULL, ylab = "Temperature (°C)", 
+        main = "Monthly T2M Distribution")
+```
+
+## Yearly & Monthly Trend
+
+Although air temperature appears relatively stable in @fig-brn-temp, with quite consistent seasonal cycles, @fig-brn-temp-year reveals a gradual upward trend. Prior to 1990, temperatures hovered around or below 27°C, but in recent years have exceeded 27.5°C. While this may seem negligible, it amounts to approximately **0.9°C over a 50-year period** (assuming the current rate of change holds). This is supported by a linear regression model, which yields a small p-value of $3.64 \times 10^{-10} < 0.01$ and a Pearson correlation coefficient of $\sqrt{0.6207} \approx 0.788$, indicating a moderate to strong positive trend over time and supporting the alternative hypothesis of increasing temperature.
+
+While linear regression may not capture all patterns due to autocorrelated residuals, it still provides useful insight into the general long-term trends. In the following section, we explore alternative modeling approaches for more insights.
+
+Additionally, from @fig-brn-temp-year and @fig-brn-temp, we observe temperature peaks in 1998, 2016, 2019 and 2023. Notably, compared to @fig-brn-temp, the annual plot may appear to have fewer peaks potentially due to monthly autocorrelation smoothing out short-term extremes. Nevertheless, this raises the question: Does Brunei’s extreme heat periods align with the El Niño cycle. How long are the cycles?
 
 ```{r, echo=FALSE}
 #| warning: false
 #| label: fig-brn-temp
-#| fig-cap: "Brunei BSB Monthly Temperature 1981-2023"
+#| fig-cap: "Monthly T2M (1981-2023)"
 viz <-
   ggplot(df, aes(x = DATE, y = T2M)) +
     geom_line(color = "steelblue") + 
@@ -120,33 +138,10 @@ viz <-
 ggplotly(viz)
 ```
 
-<br>
-
-```{r}
-lm_temp <- lm(T2M ~ YEAR, data = df)
-summary(lm_temp)
-```
-
-<br>
-
-```{r}
-#| label: fig-t2m-decomp
-#| fig-cap: "Decomposition of T2M Time Series"
-plot(decompose(t2m_ts))
-```
-
-<br>
-
-Scholars argue that linear regression may not always be suitable for time series data, especially when strong stochastic trends or autocorrelation are present. However, our data exhibits stable seasonal cycles and randomness (@fig-t2m-decomp). Since a moving average is expected to produce a similar trend, we use linear regression for simplicity while acknowledging its limitations.
-
-## Extreme Events
-
-From @fig-brn-temp-year, we observe temperature peaks in 1998 and 2023. This aligns with the El Niño cycle, indicating that Brunei is not immune to extreme weather events. Globally, both 1998 and 2023 were marked by extreme temperature anomalies, with both years experiencing record heat.
-
-```{r}
+```{r, echo=FALSE}
 #| warning: false
-#| code-fold: true
 #| label: fig-brn-temp-year
+#| fig-cap: "Annual Mean T2M (1981-2023)"
 
 # Aggregate time series by year (assuming monthly data)
 t2m_agg <- aggregate(t2m_ts, FUN = mean)
@@ -159,26 +154,30 @@ df_t2m <- data.frame(
 
 # Create ggplot
 p <- ggplot(df_t2m, aes(x = Year, y = Temperature)) +
-  geom_line(color = "blue", size = 1) +
-  geom_point(color = "red", size = 2) +
+  geom_line(color = "steelblue", size = 1) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dotted",
+              color = "darkred") +
+  geom_point(color = "blue", size = 2) +
   labs(title = "Average Yearly Temperature (T2M)",
-       x = "Year",
-       y = "Mean Temperature (°C)") +
+       x = NULL,
+       y = "Temperature (°C)") +
   theme_minimal()
 
 # Convert to interactive plot
 ggplotly(p)
 ```
 
-## Month Distribution
-
-The following is the temperature distribution by months over the 40-year period. We see that temperature is hotter in mid year and cools off towards year and and start of new year.
-
 ```{r}
-boxplot(t2m_ts ~ cycle(t2m_ts), names = month.abb, 
-        xlab = NULL, ylab = "Temperature (°C)", 
-        main = "Monthly Temperature Distribution")
+lm_temp <- lm(T2M ~ YEAR, 
+              data = df %>% 
+                select(YEAR, T2M) %>% 
+                group_by(YEAR) %>% 
+                summarize(T2M = mean(T2M)))
+summary(lm_temp)
 ```
+
+# Findings
+## Extreme Events/Anomalies/ Spectrum Analysis
 
 # Conclusion
 

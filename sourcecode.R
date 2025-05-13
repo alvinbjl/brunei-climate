@@ -19,7 +19,7 @@ library(stringr)
 # 
 # write.csv(df, "brunei_temp.csv", row.names = FALSE)
 
-# data --------------------------------------------------------------------
+# DATA: import --------------------------------------------------------------------
 df <- read_csv("brunei_temp.csv")
 df <- df %>% 
   pivot_longer(cols = 5:16, names_to = "MONTH") %>% 
@@ -30,7 +30,7 @@ df <- df %>% arrange(DATE)
 
 t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
 
-# T2M vs ST ---------------------------------------------------------------
+# DATA: T2M vs ST ---------------------------------------------------------------
 ggplot(df, aes(x = T2M, y = TS)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE, color = "blue") +
@@ -41,7 +41,13 @@ ggplot(df, aes(x = T2M, y = TS)) +
   ) +
   theme_minimal()
 
-# 1. Trend Analysis ----------------------------------------------------------
+# EDA: Monthly Temperature --------------------------------------------------
+boxplot(t2m_ts ~ cycle(t2m_ts), names = month.abb, 
+        xlab = NULL, ylab = "Temperature (°C)", 
+        main = "Monthly Temperature Distribution")
+
+
+# 2. Trend Analysis ----------------------------------------------------------
 viz <-
   ggplot(df, aes(x = DATE, y = T2M)) +
   geom_line(color = "steelblue") + 
@@ -53,8 +59,12 @@ viz <-
   theme_minimal()
 ggplotly(viz)
 
-lm_temp <- lm(T2M ~ YEAR, data = df)
-summary(lm_temp)
+lm_test <- lm(T2M ~ YEAR, 
+              data = df %>% 
+                select(YEAR, T2M) %>% 
+                group_by(YEAR) %>% 
+                summarize(T2M = mean(T2M)))
+summary(lm_test)
 
 plot(decompose(t2m_ts))
 
@@ -71,6 +81,7 @@ df_t2m <- data.frame(
 # Create ggplot
 p <- ggplot(df_t2m, aes(x = Year, y = Temperature)) +
   geom_line(color = "blue", size = 1) +
+  geom_smooth(method = "lm", se = FALSE, linetype = "dotted", color = "darkred") +
   geom_point(color = "red", size = 2) +
   labs(title = "Average Yearly Temperature (T2M)",
        x = "Year",
@@ -81,7 +92,3 @@ p <- ggplot(df_t2m, aes(x = Year, y = Temperature)) +
 ggplotly(p)
 
 
-# 3. Monthly Temperature --------------------------------------------------
-boxplot(t2m_ts ~ cycle(t2m_ts), names = month.abb, 
-        xlab = NULL, ylab = "Temperature (°C)", 
-        main = "Monthly Temperature Distribution")
