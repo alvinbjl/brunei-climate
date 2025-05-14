@@ -77,7 +77,16 @@ df <- df %>%
     select(-ANN, -LON, -LAT) %>% 
     spread(PARAMETER, value)
 df$DATE <- ymd(paste(df$YEAR, df$MONTH, "01"))
-df <- df %>% arrange(DATE)
+
+# add anomalies
+monthly_means <- df %>% 
+  group_by(MONTH) %>% 
+  summarise(T2M_mean = mean(T2M))
+
+df <- df %>%
+  left_join(monthly_means, by = "MONTH") %>%
+  mutate(anomaly = T2M - T2M_mean) %>% 
+  arrange(DATE)
 
 t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
 ```
@@ -118,9 +127,9 @@ boxplot(t2m_ts ~ cycle(t2m_ts), names = month.abb,
 
 Although air temperature appears relatively stable in @fig-brn-temp, with quite consistent seasonal cycles, @fig-brn-temp-year reveals a gradual upward trend. Prior to 1990, temperatures hovered around or below 27°C, but in recent years have exceeded 27.5°C. While this may seem negligible, it amounts to approximately **0.9°C over a 50-year period** (assuming the current rate of change holds). This is supported by a linear regression model, which yields a small p-value of $3.64 \times 10^{-10} < 0.01$ and a Pearson correlation coefficient of $\sqrt{0.6207} \approx 0.788$, indicating a moderate to strong positive trend over time and supporting the alternative hypothesis of increasing temperature.
 
-While linear regression may not capture all patterns due to autocorrelated residuals, it still provides useful insight into the general long-term trends. In the following section, we explore alternative modeling approaches for more insights.
+WWhile linear regression may not be the most accurate model for capturing long-term trends due to autocorrelated residuals (temperature of consecutive months may be related), violating the independence assumption, it still offers valuable insight into the general general direction of temperature changes over time.
 
-Additionally, from @fig-brn-temp-year and @fig-brn-temp, we observe temperature peaks in 1998, 2016, 2019 and 2023. Notably, compared to @fig-brn-temp, the annual plot may appear to have fewer peaks potentially due to monthly autocorrelation smoothing out short-term extremes. Nevertheless, this raises the question: Does Brunei’s extreme heat periods align with the El Niño cycle. How long are the cycles?
+Additionally, from @fig-brn-temp and @fig-brn-temp-year, we observe temperature peaks in 1998, 2016, 2019 and 2023. Notably, the annual plot (@fig-brn-temp-year) appears to have fewer peaks compared to the monthly plot (@fig-brn-temp), likely due to monthly autocorrelation smoothing out short-term extremes into broader yearly trends. Nevertheless, the present of temperature peaks raises some important questions: What are the periodicities (cycle lengths) of Brunei’s air temperature anomalies? Do the anomalies align with the El Niño-Southern Oscillation (ENSO) cycle? 
 
 ```{r, echo=FALSE}
 #| warning: false
@@ -177,7 +186,46 @@ summary(lm_temp)
 ```
 
 # Findings
-## Extreme Events/Anomalies/ Spectrum Analysis
+## Spectrum Analysis
+Applying spectral analysis to the deseasonalized and detrended temperature anomalies (@fig-spectral), we identified significant periodicities at 18, 30, 37, and most significant periodicity of 43 months. This 43-month cycle falls within the typical ENSO range of 2–7 years (24–84 months), suggesting a potential alignment with the ENSO cycle. The presence of multiple peaks (18, 30, 37, 43 months) indicates that ENSO-driven cycles in Brunei’s temperature data are not uniform but vary within the 2–7-year range, reflecting the irregular timing of ENSO events. To further verify this alignment with ENSO, we explore linear regression and cross-correlation methods in the next section.
+
+Additionally, we observed two weaker peaks at 65 and 86 months (approximately 5.4 and 7.2 years), which may correspond to longer-term oscillations, such as extended ENSO variability or decadal patterns like the Pacific Decadal Oscillation (PDO). However, we interpret these longer cycles with caution, as our dataset spans only 41 years (492 months). 
+
+```{r, echo=FALSE, output=FALSE}
+# Detrend
+anomalies <- df$anomaly
+time <- 1:length(anomalies)
+fit <- lm(anomalies ~ time)  # Linear detrending
+anomalies_detrended <- residuals(fit)
+
+library(GeneCycle)
+spec <- periodogram(anomalies_detrended)
+periods <- 1 / spec$freq  # Convert frequencies to periods (in months)
+
+# Create a data frame for Plotly
+p <- data.frame(periods = periods, spectral_density = spec$spec)
+
+# Filter to the desired range (2–120 months)
+p <- p %>% filter(periods >= 2 & periods <= 130)
+```
+
+```{r, echo=FALSE}
+#| label: fig-spectral
+#| fig-cap: "Spectral Analysis of Detrend Temperature Anomalies"
+
+viz <- 
+  ggplot(data = p, aes(x = periods, y = spectral_density)) +
+  geom_line(color = "steelblue") +
+  labs(
+    x = "Spectral Density (Strength)",
+    y = "Cycle Length (Months)"
+  ) +
+  theme_minimal()
+ggplotly(viz)
+```
+
+
+## Anomalies vs ENSO
 
 # Conclusion
 
