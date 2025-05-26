@@ -15,16 +15,20 @@ format:
         href: https://github.com/alvinbjl/brunei-climate
       - text: R Script
         href: https://github.com/alvinbjl/brunei-climate/blob/main/sourcecode.R
+
+bibliography: refs.bib
 ---
 To do: <br>
 
-- Check if there is any raw data. Add information on data and location of data.
+- Explore EOF/PCA. Probably need more variables
 
-- Extreme events: Try plotting anomalies (to determine periodicity, spectrum analysis)
+- Forecast/Models
 
 - Correlation analysis with Nino. index
 
-- Explore EOF/PCA. Probably need more variables
+✅  Check if there is any raw data. Add information on data and location of data.
+
+✅  Extreme events: Try plotting anomalies (to determine periodicity, spectrum analysis)
 
 ✅ Feel lack rigor/indepth analysis, mostly EDA for now, consult Dr. Haziq for advice. <br>
     Advice: Since interdiscipline field, need to consult geography background experts, to check if I am asking the right questions.<br>
@@ -34,14 +38,19 @@ To do: <br>
 
 Climate change has been prevalent worldwide, causing adverse effects felt by all. Given temperature being one of the most important indicators of climate change, it would be interesting to explore:
 
--   How has Brunei's temperature evolved over time?
--   Is this consistent with global temperature trends?
 -   How temperature varies by month?
 
-# Data Collection and Cleaning
+-   How has Brunei's temperature evolved over time? 
 
-## Data Collection
-The dataset is sourced from [`NASA POWER API`](https://power.larc.nasa.gov/) using `{nasapower}` package in R, covering years 1981 to 2023.
+-   Any periodicities? Are they consistent with global temperature trends/ENSO?
+
+# Data Collection and Wrangling
+
+The temperature dataset is sourced from [`NASA POWER API`](https://power.larc.nasa.gov/) using `{nasapower}` package in R, covering years 1981 to 2023, corresponding to the location (115,5) [@nasapower]. Nino 3.4 index for @sec-findings-enso is obtained from NOAA website [@rayner2003global]. To wrangle data for suitable analysis:
+
+- `anomaly` obtained by subtracting temperature of each month from the monthly  mean
+
+- `detrend` obtained by residues of linear regression across the anomalies.
 
 ```{r include=FALSE}
 library(nasapower)
@@ -54,22 +63,20 @@ library(lubridate)
 library(stringr)
 ```
 
-```{r, eval=FALSE}
-#| code-fold: true
-df <- get_power(
-  community = "re",
-  lonlat = c(114.9, 4.9),
-  pars = c("T2M", "T2M_MAX", "T2M_MIN", "TS", "TS_MAX", "TS_MIN"),
-  dates = c("1981-01-01", "2023-12-31"),
-  temporal_api = "monthly"
-)
+<!-- # ```{r, eval=FALSE} -->
+<!-- # #| code-fold: true -->
+<!-- # df <- get_power( -->
+<!-- #   community = "re", -->
+<!-- #   lonlat = c(114.9, 4.9), -->
+<!-- #   pars = c("T2M", "T2M_MAX", "T2M_MIN", "TS", "TS_MAX", "TS_MIN"), -->
+<!-- #   dates = c("1981-01-01", "2023-12-31"), -->
+<!-- #   temporal_api = "monthly" -->
+<!-- # ) -->
+<!-- #  -->
+<!-- # write.csv(df, "brunei_temp.csv", row.names = FALSE) -->
+<!-- # ``` -->
 
-write.csv(df, "brunei_temp.csv", row.names = FALSE)
-```
-
-## Data Wrangling
-
-```{r}
+```{r, echo=FALSE}
 #| warning: false
 df <- read_csv("brunei_temp.csv")
 df <- df %>% 
@@ -77,6 +84,24 @@ df <- df %>%
     select(-ANN, -LON, -LAT) %>% 
     spread(PARAMETER, value)
 df$DATE <- ymd(paste(df$YEAR, df$MONTH, "01"))
+
+t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
+
+# add nino3.4 index
+df <- 
+  read_csv("nino34.csv") %>% 
+  filter(Date > as.Date("1980-12-01") & Date < as.Date("2024-01-01")) %>% 
+  right_join(df, join_by(Date == DATE) )%>% 
+  rename(DATE = Date)
+
+colnames(df)[2] <- "nino3.4"
+
+nino_ts <- ts(df$nino3.4, start = c(1981, 1), frequency = 12)
+```
+
+```{r, output=FALSE}
+#| warning: false
+#| code-fold: true
 
 # add anomalies
 monthly_means <- df %>% 
@@ -88,7 +113,10 @@ df <- df %>%
   mutate(anomaly = T2M - T2M_mean) %>% 
   arrange(DATE)
 
-t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
+# detrend
+time <- 1:length(df$anomaly)
+fit <- lm(df$anomaly ~ time) 
+anomalies_detrended <- residuals(fit)
 ```
 
 ## Variable of interest
@@ -222,9 +250,7 @@ viz <-
 ggplotly(viz)
 ```
 
-## Anomalies vs ENSO
-
-
+## Anomalies vs ENSO {#sec-findings-enso}
 
 # Conclusion
 
@@ -238,4 +264,4 @@ This project can be summarised in three main points:
 
 # Acknowledgements
 
-The author expresses gratitude to NASA POWER for the data used in the project.
+The author expresses gratitude to NASA for the data used in the project. These data were obtained from the NASA Langley Research Center (LaRC) POWER Project funded through the NASA Earth Science/Applied Science Program.
