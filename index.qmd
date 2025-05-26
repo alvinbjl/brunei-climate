@@ -14,7 +14,7 @@ format:
         icon: github
         href: https://github.com/alvinbjl/brunei-climate
       - text: R Script
-        href: https://github.com/alvinbjl/brune-climate/blob/main/sourcecode.R
+        href: https://github.com/alvinbjl/brunei-climate/blob/main/sourcecode.R
 ---
 To do: <br>
 
@@ -187,9 +187,7 @@ summary(lm_temp)
 
 # Findings
 ## Spectrum Analysis
-Applying spectral analysis to the deseasonalized and detrended temperature anomalies (@fig-spectral), we identified significant periodicities at 18, 30, 37, and most significant periodicity of 43 months. This 43-month cycle falls within the typical ENSO range of 2–7 years (24–84 months), suggesting a potential alignment with the ENSO cycle. The presence of multiple peaks (18, 30, 37, 43 months) indicates that ENSO-driven cycles in Brunei’s temperature data are not uniform but vary within the 2–7-year range, reflecting the irregular timing of ENSO events. To further verify this alignment with ENSO, we explore linear regression and cross-correlation methods in the next section.
-
-Additionally, we observed two weaker peaks at 65 and 86 months (approximately 5.4 and 7.2 years), which may correspond to longer-term oscillations, such as extended ENSO variability or decadal patterns like the Pacific Decadal Oscillation (PDO). However, we interpret these longer cycles with caution, as our dataset spans only 41 years (492 months). 
+Spectral analysis of the deseasonalized, detrended temperature anomalies (@fig-spectral), revealed periodicities at approximately 18, 29, 37, 65, and 86 months, with the dominant cycle at 43 months. This 43-month ($\approx$ 3.6 years) cycle falls within the typical ENSO range of 2–7 years, suggesting a potential alignment with the ENSO cycle. The presence of multiple peaks indicates that ENSO-driven cycles in Brunei’s temperature data are not uniform but vary within the 2–7 year range, reflecting the irregular timing of ENSO events. To further verify this alignment with ENSO, we explore linear regression and cross-correlation methods in the next section.
 
 ```{r, echo=FALSE, output=FALSE}
 # Detrend
@@ -224,8 +222,9 @@ viz <-
 ggplotly(viz)
 ```
 
-
 ## Anomalies vs ENSO
+
+
 
 # Conclusion
 
