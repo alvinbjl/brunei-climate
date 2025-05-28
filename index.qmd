@@ -24,7 +24,7 @@ To do: <br>
 
 - Forecast/Models
 
-- Correlation analysis with Nino. index
+✅  Correlation analysis with Nino. index
 
 ✅  Check if there is any raw data. Add information on data and location of data.
 
@@ -52,6 +52,8 @@ The temperature dataset is sourced from [`NASA POWER API`](https://power.larc.na
 
 - `detrend` obtained by residues of linear regression across the anomalies.
 
+<!-- why choose nino 3.4 not other index -->
+
 ```{r include=FALSE}
 library(nasapower)
 library(tidyverse)
@@ -61,6 +63,7 @@ library(forecast)
 library(tsibble)
 library(lubridate)
 library(stringr)
+library(TSA)
 ```
 
 <!-- # ```{r, eval=FALSE} -->
@@ -82,10 +85,8 @@ df <- read_csv("brunei_temp.csv")
 df <- df %>% 
     pivot_longer(cols = 5:16, names_to = "MONTH") %>% 
     select(-ANN, -LON, -LAT) %>% 
-    spread(PARAMETER, value)
+    pivot_wider(names_from = PARAMETER, values_from = value)
 df$DATE <- ymd(paste(df$YEAR, df$MONTH, "01"))
-
-t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
 
 # add nino3.4 index
 df <- 
@@ -96,6 +97,8 @@ df <-
 
 colnames(df)[2] <- "nino3.4"
 
+# ts
+t2m_ts <- ts(df$T2M, start = c(1981, 1), frequency = 12)
 nino_ts <- ts(df$nino3.4, start = c(1981, 1), frequency = 12)
 ```
 
@@ -121,19 +124,19 @@ anomalies_detrended <- residuals(fit)
 
 ## Variable of interest
 
-NASA provides two temperature-related variables: `T2M` (temperature at 2 meters) and `TS` (surface temperature). A comparison shows that both are highly correlated, making one sufficient for analysis. Since `T2M` better represents the temperature experienced by a person, this project uses `T2M`. However, using `TS` would likely yield similar results.
+NASA provides two temperature-related variables: `T2M` (temperature at 2 meters) and `TS` (surface temperature). A comparison shows that both are highly correlated ($\rho=`r cor(df$T2M, df$TS) %>%  round(2)`$), making one sufficient for analysis. Since `T2M` better represents the temperature experienced by a person, this project uses `T2M`. However, using `TS` would likely yield similar results.
 
 ```{r, echo=FALSE}
 #| warning: false
 ggplot(df, aes(x = T2M, y = TS)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  geom_point(alpha=0.5) +
+  geom_smooth(method = "lm", se = FALSE, color = "steelblue") +
   labs(
     title = "TS vs T2M",
     x = "T2M",
     y = "TS"
   ) +
-  theme_minimal()
+  theme_bw()
 ```
 
 # EDA
@@ -153,9 +156,10 @@ boxplot(t2m_ts ~ cycle(t2m_ts), names = month.abb,
 
 ## Yearly & Monthly Trend
 
-Although air temperature appears relatively stable in @fig-brn-temp, with quite consistent seasonal cycles, @fig-brn-temp-year reveals a gradual upward trend. Prior to 1990, temperatures hovered around or below 27°C, but in recent years have exceeded 27.5°C. While this may seem negligible, it amounts to approximately **0.9°C over a 50-year period** (assuming the current rate of change holds). This is supported by a linear regression model, which yields a small p-value of $3.64 \times 10^{-10} < 0.01$ and a Pearson correlation coefficient of $\sqrt{0.6207} \approx 0.788$, indicating a moderate to strong positive trend over time and supporting the alternative hypothesis of increasing temperature.
+Although air temperature appears relatively stable in @fig-brn-temp, with quite consistent seasonal cycles, @fig-brn-temp-year reveals a gradual upward trend. Prior to 1990, temperatures hovered around or below 27°C, but in recent years have exceeded 27.5°C. While this may seem negligible, it amounts to approximately **0.9°C over a 50-year period** (assuming the current rate of change holds). This is supported by a linear regression model, which yields a small p-value of $3.64 \times 10^{-10} < 0.01$ and a Pearson correlation coefficient of ($\rho=`r df_summary <- df %>% select(YEAR, T2M) %>% group_by(YEAR) %>% summarize(T2M = mean(T2M))
+  cor(df_summary$YEAR, df_summary$T2M) %>%  round(2)`$), indicating a moderate to strong positive trend over time and supporting the alternative hypothesis of increasing temperature.
 
-WWhile linear regression may not be the most accurate model for capturing long-term trends due to autocorrelated residuals (temperature of consecutive months may be related), violating the independence assumption, it still offers valuable insight into the general general direction of temperature changes over time.
+While linear regression may not be the most accurate model for capturing long-term trends due to autocorrelated residuals (temperature of consecutive months may be related), violating the independence assumption, it still offers valuable insight into the general general direction of temperature changes over time.
 
 Additionally, from @fig-brn-temp and @fig-brn-temp-year, we observe temperature peaks in 1998, 2016, 2019 and 2023. Notably, the annual plot (@fig-brn-temp-year) appears to have fewer peaks compared to the monthly plot (@fig-brn-temp), likely due to monthly autocorrelation smoothing out short-term extremes into broader yearly trends. Nevertheless, the present of temperature peaks raises some important questions: What are the periodicities (cycle lengths) of Brunei’s air temperature anomalies? Do the anomalies align with the El Niño-Southern Oscillation (ENSO) cycle? 
 
@@ -204,7 +208,7 @@ p <- ggplot(df_t2m, aes(x = Year, y = Temperature)) +
 ggplotly(p)
 ```
 
-```{r}
+```{r, echo=FALSE}
 lm_temp <- lm(T2M ~ YEAR, 
               data = df %>% 
                 select(YEAR, T2M) %>% 
@@ -218,13 +222,8 @@ summary(lm_temp)
 Spectral analysis of the deseasonalized, detrended temperature anomalies (@fig-spectral), revealed periodicities at approximately 18, 29, 37, 65, and 86 months, with the dominant cycle at 43 months. This 43-month ($\approx$ 3.6 years) cycle falls within the typical ENSO range of 2–7 years, suggesting a potential alignment with the ENSO cycle. The presence of multiple peaks indicates that ENSO-driven cycles in Brunei’s temperature data are not uniform but vary within the 2–7 year range, reflecting the irregular timing of ENSO events. To further verify this alignment with ENSO, we explore linear regression and cross-correlation methods in the next section.
 
 ```{r, echo=FALSE, output=FALSE}
-# Detrend
-anomalies <- df$anomaly
-time <- 1:length(anomalies)
-fit <- lm(anomalies ~ time)  # Linear detrending
-anomalies_detrended <- residuals(fit)
-
 library(GeneCycle)
+anomalies_ts <- ts(anomalies_detrended, start = c(1981, 1), frequency = 12)
 spec <- periodogram(anomalies_detrended)
 periods <- 1 / spec$freq  # Convert frequencies to periods (in months)
 
@@ -251,6 +250,61 @@ ggplotly(viz)
 ```
 
 ## Anomalies vs ENSO {#sec-findings-enso}
+Although @fig-anom-nino-ts shows similar trends between the temperature anomaly and the Nino 3.4 index, the linear regression in @fig-anom-vs-nino reveals a weak correlation ($\rho=`r cor(df$anomaly, df$nino3.4) %>%  round(2)`$). However, this low correlation is likely due to a time delay between the two variables, commonly referred to as a lag. Using cross-correlation analysis (@fig-ccf), we observe a significant correlation peak (95% confidence interval) spanning from approximately lag -0.3 to 0.7 months, indicating that while temperature anomalies and ENSO are closely aligned, there may be a slight time lag, with either the Nino 3.4 index or the temperature anomaly occasionally leading the other.
+
+Additionally, the strongest correlation occurs at approximately 0.5, indicating a relatively stronger positive relationship when the two series are aligned in time. The correlation explains up to approximately 25% of the variance (r² = 0.5²) at lag 0.3, double the 12.5% explained by the zero-lag linear regression. This is a notable finding in climate studies, where temperature is influenced by multiple interacting factors.
+
+<!-- Does this aligns with global studies of % of explained var by ENSO? -->
+
+```{r, echo=FALSE}
+#| warning: false
+#| label: fig-anom-nino-ts
+#| fig-cap: "Time Series of Nino 3.4 Index & Temperature Anomaly"
+
+ggplot(df) +
+  geom_line(aes(x = DATE, y = `nino3.4`, color = "Nino 3.4 index")) +
+  geom_line(aes(x = DATE, y = anomaly, color = "Temp. Anomaly")) +
+  scale_color_manual(values = c("Nino 3.4 index" = "red", "Temp. Anomaly" = "steelblue")) +
+  labs(
+    x = "Date",
+    y = "Temperature (°C)",
+    color = NULL
+  ) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+```{r, echo=FALSE}
+#| warning: false
+#| label: fig-anom-vs-nino
+#| fig-cap: "Scatter plot (Temperature Anomaly vs Nino 3.4 Index)"
+
+df %>% 
+  ggplot(aes(x = anomaly, y = `nino3.4`)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "steelblue") +
+  labs(
+    x = "anomaly (°C)",
+    y = "nino 3.4 index (°C)"
+  ) +
+  theme_minimal()
+```
+
+```{r, echo=FALSE}
+#| warning: false
+fit <- lm(df$anomaly ~ df$`nino3.4`)
+summary(fit)
+```
+
+```{r, echo=FALSE}
+#| warning: false
+#| label: fig-ccf
+#| fig-cap: "Cross-correlation function (ccf) of anomaly against Nino 3.4 Index"
+
+ccf(anomalies_ts, nino_ts, ylab = "cross-correlation", main = "")
+```
+
+## Forecast Models
 
 # Conclusion
 
