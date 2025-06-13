@@ -18,39 +18,24 @@ format:
 
 bibliography: refs.bib
 ---
-To do: <br>
 
-- Explore EOF/PCA. Probably need more variables
-
-- Forecast/Models
-
-✅  Correlation analysis with Nino. index
-
-✅  Check if there is any raw data. Add information on data and location of data.
-
-✅  Extreme events: Try plotting anomalies (to determine periodicity, spectrum analysis)
-
-✅ Feel lack rigor/indepth analysis, mostly EDA for now, consult Dr. Haziq for advice. <br>
-    Advice: Since interdiscipline field, need to consult geography background experts, to check if I am asking the right questions.<br>
-✅ Discussed with  senior Amir , gained ideas on  project outline (similar to his ongoing project on rainfall analysis.)
-
-# Research Question
+# Introduction & Literature Review
 
 Climate change has been prevalent worldwide, causing adverse effects felt by all. Given temperature being one of the most important indicators of climate change, it would be interesting to explore:
 
--   How temperature varies by month?
+-   How does Brunei's temperature varies by month & how it evolved over time?
 
--   How has Brunei's temperature evolved over time? 
+-   Is there any periodicities & are they consistent with global temperature trends/ENSO?
 
--   Any periodicities? Are they consistent with global temperature trends/ENSO?
+-   Different forecast models for to predict temperature trends
 
 # Data Collection and Wrangling
 
 The temperature dataset is sourced from [`NASA POWER API`](https://power.larc.nasa.gov/) using `{nasapower}` package in R, covering years 1981 to 2023, corresponding to the location (115,5) [@nasapower]. Nino 3.4 index for @sec-findings-enso is obtained from NOAA website [@rayner2003global]. To wrangle data for suitable analysis:
 
-- `anomaly` obtained by subtracting temperature of each month from the monthly  mean
+-   `anomaly` obtained by subtracting temperature of each month from the monthly mean
 
-- `detrend` obtained by residues of linear regression across the anomalies.
+-   `detrend` obtained by residues of linear regression across the anomalies.
 
 <!-- why choose nino 3.4 not other index -->
 
@@ -66,7 +51,6 @@ library(stringr)
 library(TSA)
 ```
 
-<!-- # ```{r, eval=FALSE} -->
 <!-- # #| code-fold: true -->
 <!-- # df <- get_power( -->
 <!-- #   community = "re", -->
@@ -74,10 +58,7 @@ library(TSA)
 <!-- #   pars = c("T2M", "T2M_MAX", "T2M_MIN", "TS", "TS_MAX", "TS_MIN"), -->
 <!-- #   dates = c("1981-01-01", "2023-12-31"), -->
 <!-- #   temporal_api = "monthly" -->
-<!-- # ) -->
-<!-- #  -->
 <!-- # write.csv(df, "brunei_temp.csv", row.names = FALSE) -->
-<!-- # ``` -->
 
 ```{r, echo=FALSE}
 #| warning: false
@@ -143,7 +124,7 @@ ggplot(df, aes(x = T2M, y = TS)) +
 
 ## Monthly Distribution
 
-From @fig-box-plt, we see that temperature are highest from April to September, with a peak in May, indicating the warmest part of the year. A general cooling trend is observed in the last quarter of the year, with an abrupt temperature drop from December to January. This marks the transition into the coolest part of the year, spanning January to March. During this three months, the average temperature drops below 27°C. 
+From @fig-box-plt, we see that temperature are highest from April to September, with a peak in May, indicating the warmest part of the year. A general cooling trend is observed in the last quarter of the year, with an abrupt temperature drop from December to January. This marks the transition into the coolest part of the year, spanning January to March. During this three months, the average temperature drops below 27°C.
 
 Another significant observation is that the Range and Interquartile Range (IQR) seems widest in November and January, suggesting higher variability and less consistent temperatures during these months. This could indicate transitional weather patterns.
 
@@ -161,7 +142,7 @@ Although air temperature appears relatively stable in @fig-brn-temp, with quite 
 
 While linear regression may not be the most accurate model for capturing long-term trends due to autocorrelated residuals (temperature of consecutive months may be related), violating the independence assumption, it still offers valuable insight into the general general direction of temperature changes over time.
 
-Additionally, from @fig-brn-temp and @fig-brn-temp-year, we observe temperature peaks in 1998, 2016, 2019 and 2023. Notably, the annual plot (@fig-brn-temp-year) appears to have fewer peaks compared to the monthly plot (@fig-brn-temp), likely due to monthly autocorrelation smoothing out short-term extremes into broader yearly trends. Nevertheless, the present of temperature peaks raises some important questions: What are the periodicities (cycle lengths) of Brunei’s air temperature anomalies? Do the anomalies align with the El Niño-Southern Oscillation (ENSO) cycle? 
+Additionally, from @fig-brn-temp and @fig-brn-temp-year, we observe temperature peaks in 1998, 2016, 2019 and 2023. Notably, the annual plot (@fig-brn-temp-year) appears to have fewer peaks compared to the monthly plot (@fig-brn-temp), likely due to monthly autocorrelation smoothing out short-term extremes into broader yearly trends. Nevertheless, the present of temperature peaks raises some important questions: What are the periodicities (cycle lengths) of Brunei’s air temperature anomalies? Do the anomalies align with the El Niño-Southern Oscillation (ENSO) cycle?
 
 ```{r, echo=FALSE}
 #| warning: false
@@ -208,18 +189,21 @@ p <- ggplot(df_t2m, aes(x = Year, y = Temperature)) +
 ggplotly(p)
 ```
 
-```{r, echo=FALSE}
-lm_temp <- lm(T2M ~ YEAR, 
-              data = df %>% 
-                select(YEAR, T2M) %>% 
-                group_by(YEAR) %>% 
-                summarize(T2M = mean(T2M)))
-summary(lm_temp)
-```
 
-# Findings
+<!-- lm_temp <- lm(T2M ~ YEAR,  -->
+<!--               data = df %>%  -->
+<!--                 select(YEAR, T2M) %>%  -->
+<!--                 group_by(YEAR) %>%  -->
+<!--                 summarize(T2M = mean(T2M))) -->
+<!-- summary(lm_temp) -->
+
+# Methods
+
+# Results
+
 ## Spectrum Analysis
-Spectral analysis of the deseasonalized, detrended temperature anomalies (@fig-spectral), revealed periodicities at approximately 18, 29, 37, 65, and 86 months, with the dominant cycle at 43 months. This 43-month ($\approx$ 3.6 years) cycle falls within the typical ENSO range of 2–7 years, suggesting a potential alignment with the ENSO cycle. The presence of multiple peaks indicates that ENSO-driven cycles in Brunei’s temperature data are not uniform but vary within the 2–7 year range, reflecting the irregular timing of ENSO events. To further verify this alignment with ENSO, we explore linear regression and cross-correlation methods in the next section.
+
+Spectral analysis of the deseasonalized, detrended temperature anomalies (@fig-spectral), revealed periodicities at approximately 18, 29, 37, 65, and 86 months, with the dominant cycle at 43 months ($\approx$ 3.6 years). This 43-months cycle falls within the typical ENSO range of 2–7 years, suggesting a potential alignment with the ENSO cycle. The presence of multiple peaks indicates that ENSO-driven cycles are not uniform but exhibit variability within this range, likely reflecting the irregular timing and intensity of ENSO events. To further validate this relationship, @sec-findings-enso explore linear regression and cross-correlation analyses.
 
 ```{r, echo=FALSE, output=FALSE}
 library(GeneCycle)
@@ -250,11 +234,30 @@ ggplotly(viz)
 ```
 
 ## Anomalies vs ENSO {#sec-findings-enso}
-Although @fig-anom-nino-ts shows similar trends between the temperature anomaly and the Nino 3.4 index, the linear regression in @fig-anom-vs-nino reveals a weak correlation ($\rho=`r cor(df$anomaly, df$nino3.4) %>%  round(2)`$). However, this low correlation is likely due to a time delay between the two variables, commonly referred to as a lag. Using cross-correlation analysis (@fig-ccf), we observe a significant correlation peak (95% confidence interval) spanning from approximately lag -0.3 to 0.7 months, indicating that while temperature anomalies and ENSO are closely aligned, there may be a slight time lag, with either the Nino 3.4 index or the temperature anomaly occasionally leading the other.
 
-Additionally, the strongest correlation occurs at approximately 0.5, indicating a relatively stronger positive relationship when the two series are aligned in time. The correlation explains up to approximately 25% of the variance (r² = 0.5²) at lag 0.3, double the 12.5% explained by the zero-lag linear regression. This is a notable finding in climate studies, where temperature is influenced by multiple interacting factors.
+The trends depicted in @fig-anom-nino-ts suggest a similarity between temperature anomalies and the Nino 3.4 index, though the Nino index is more extreme in the peaks and troughs. However, the linear regression in @fig-anom-vs-nino reveals a weak correlation ($\rho=`r cor(df$anomaly, df$nino3.4) %>%  round(2)`$). This low correlation is likely attributable to a time lag between the two variables, a common phenomenon in climate data. 
+
+Cross-correlation analysis (@fig-ccf) reveals a significant correlation peak within the 95% confidence interval, ranging from approximately -0.3 to 0.7 months. This suggests a close alignment between temperature anomalies and the ENSO (El Niño-Southern Oscillation) index, with a slight time lag where either the Nino 3.4 index or the temperature anomaly may occasionally lead.
+
+Additionally, the strongest correlation at a lag of approximately 0.4 months, indicates a relatively robust positive relationship when the two series are appropriately aligned. This correlation accounts for up to approximately 25% of the variance (r² = 0.5²) at lag 0.3 months, doubling the 12.5% (r² = 0.36²) explained by the zero-lag linear regression.
 
 <!-- Does this aligns with global studies of % of explained var by ENSO? -->
+```{r, echo=FALSE}
+#| warning: false
+#| label: fig-anom-vs-nino
+#| fig-cap: "Scatter plot (Temperature Anomaly vs Nino 3.4 Index)"
+#| column: margin
+
+df %>% 
+  ggplot(aes(x = anomaly, y = `nino3.4`)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE, color = "steelblue") +
+  labs(
+    x = "anomaly (°C)",
+    y = "nino 3.4 index (°C)"
+  ) +
+  theme_minimal()
+```
 
 ```{r, echo=FALSE}
 #| warning: false
@@ -276,28 +279,6 @@ ggplot(df) +
 
 ```{r, echo=FALSE}
 #| warning: false
-#| label: fig-anom-vs-nino
-#| fig-cap: "Scatter plot (Temperature Anomaly vs Nino 3.4 Index)"
-
-df %>% 
-  ggplot(aes(x = anomaly, y = `nino3.4`)) +
-  geom_point() +
-  geom_smooth(method = "lm", se = FALSE, color = "steelblue") +
-  labs(
-    x = "anomaly (°C)",
-    y = "nino 3.4 index (°C)"
-  ) +
-  theme_minimal()
-```
-
-```{r, echo=FALSE}
-#| warning: false
-fit <- lm(df$anomaly ~ df$`nino3.4`)
-summary(fit)
-```
-
-```{r, echo=FALSE}
-#| warning: false
 #| label: fig-ccf
 #| fig-cap: "Cross-correlation function (ccf) of anomaly against Nino 3.4 Index"
 
@@ -306,7 +287,182 @@ ccf(anomalies_ts, nino_ts, ylab = "cross-correlation", main = "")
 
 ## Forecast Models
 
-# Conclusion
+From @tbl-model, linear regression exhibits the lowest MAE (0.253°C), RMSE (0.308°C), and MAPE (0.915%), achieving the highest accuracy of 99.1%. The remaining models (ARIMA, Random Forest and Gaussian Process) have a similar MAPE values around 1.2%, with MAE differences of about 0.07°C compared to linear regression. These findings suggest that while linear regression performs best, the models are fairly similar in overall performance. Despite the high accuracy and low errors, individual errors can vary more significantly, as seen in @fig-forecast-models). Particularly, during months with peak temperatures, the models often underestimate, with the maximum underestimation reaching up to 1 degree Celsius.
+
+Using the linear regression model, which performed best, to estimate average monthly temperature for 2024, 2025, and 2026 (@fig-forecast), it can be observed that temperatures peak in May, reaching over 28 degrees Celsius, and drop to below 27 degrees Celsius in January and February. This pattern is consistent with the monthly temperature distribution in BSB, Brunei (@fig-box-plt).
+
+```{r, echo=FALSE, output=FALSE, warning=FALSE}
+forecast_df <- df %>% mutate(lag_one = lag(df$T2M, 1), lag_two = lag(df$T2M, 2))
+train <- forecast_df[1:408,] %>% dplyr::select(1,3,4,5,13,14)
+train_clean <- train %>% drop_na()
+test <- forecast_df[409:516,] %>% dplyr::select(1,3,4,5,13,14)
+test_clean <- test %>% drop_na()
+train_ts <- ts(train$T2M, start = c(1981, 1), frequency = 12)
+test_ts <- ts(test$T2M, start = c(2015, 1), frequency = 12)
+
+# A. Arima
+fit <- auto.arima(train_ts)
+forecast_values <- forecast(fit, h = length(test_ts))
+forecast::accuracy(forecast_values, test_ts)
+test$pred_ar <- as.numeric(forecast_values$mean)  
+
+# B. linear regression
+fit_lm <- lm(T2M ~ YEAR + MONTH + lag_one + lag_two, data = train)
+test$pred_lm <- predict(fit_lm, test)
+# why not just use use more lags as variable: similar accuracy
+
+# C. Random Forest
+library(randomForest)
+set.seed(123)
+fit <- randomForest(T2M ~ YEAR + MONTH + lag_one + lag_two, data = train_clean)
+# # Pre-fill column
+test$pred_rf <- NA
+# # Find rows with no missing predictor values
+complete_rows <- complete.cases(test[c("YEAR", "MONTH", "lag_one", "lag_two")])
+# Predict only on complete rows
+test$pred_rf[complete_rows] <- predict(fit, newdata = test[complete_rows, ])
+
+# D. Gaussian Process
+library(kernlab)
+fit <- gausspr(T2M ~ YEAR + MONTH + lag_one + lag_two, data = train_clean)
+test$pred_gp <- as.vector(predict(fit, test))
+
+# Accuracy
+library(Metrics)
+res <- tibble(error = c("Mean Absolute Error (MAE)",
+                        "Root Mean Square Error (RMSE)",
+                        "Mean Absolute Percentage Error (MAPE)"))
+res$ar <- c(mae(test$T2M, test$pred_ar), 
+            rmse(test$T2M, test$pred_ar), 
+            mape(test$T2M, test$pred_ar))
+res$lm <- c(mae(test$T2M, test$pred_lm), 
+            rmse(test$T2M, test$pred_lm), 
+            mape(test$T2M, test$pred_lm))
+res$rf <- c(mae(test$T2M, test$pred_rf), 
+            rmse(test$T2M, test$pred_rf), 
+            mape(test$T2M, test$pred_rf))
+res$gp <- c(mae(test$T2M, test$pred_gp), 
+            rmse(test$T2M, test$pred_gp), 
+            mape(test$T2M, test$pred_gp))
+res <- bind_rows(res, tibble(
+  error = "Accuracy (1 - MAPE)",
+  ar = 1 - res$ar[3],
+  lm = 1 - res$lm[3],
+  rf = 1 - res$rf[3],
+  gp = 1 - res$gp[3]
+))
+```
+
+```{r, echo=FALSE}
+#| warning: false
+#| label: fig-forecast-models
+#| fig-cap: "Forecast Models Comparison: ARIMA, Linear Regression, Random Forest, Gaussian Process"
+
+test %>%
+  dplyr::select(DATE, T2M, pred_ar, pred_lm, pred_rf, pred_gp) %>%
+  pivot_longer(cols = starts_with("pred_"),
+               names_to = "Model",
+               values_to = "Forecast") %>%
+  mutate(Model = recode(Model,
+                        pred_ar = "ARIMA",
+                        pred_lm = "Linear Regression",
+                        pred_rf = "Random Forest",
+                        pred_gp = "Gaussian Process")) %>% 
+  ggplot(aes(x = DATE)) +
+    geom_line(aes(y = T2M, color = "Actual"), linewidth = 0.5) +  # Map color as aesthetic
+    geom_line(aes(y = Forecast, color = "Forecast"), linewidth = 0.5, linetype = "dashed") +
+    scale_color_manual(values = c("Actual" = "steelblue", "Forecast" = "red")) +  # Match labels
+    facet_wrap(~Model, ncol = 1) +
+    labs(title = "Forecasts vs. Actual Temperature",
+         x = "Date", y = "Temperature") +  # Optional: Add legend title
+    theme_minimal() +
+    theme(legend.position = "bottom")
+```
+
+```{r, echo=FALSE}
+#| warning: false
+#| label: fig-forecast
+#| fig-cap: "Forecast using linear model for year 2024, 2025 & 2026."
+#| column: margin
+
+# predict for 2025
+date <- seq(as.Date("2024-01-01"), as.Date("2026-12-01"), by = "month")
+future_df <- tibble(
+  DATE = date,
+  YEAR = as.integer(format(date, "%Y")),
+  MONTH = toupper(format(date, "%b"))
+)
+
+last_known <- tail(forecast_df$T2M, 2)  # last two known T2M values
+
+# Initialize lags
+future_df$lag_one <- NA
+future_df$lag_two <- NA
+future_df$pred <- NA
+
+# Fill in lags and predict step by step
+for (i in seq_len(nrow(future_df))) {
+  if (i == 1) {
+    future_df$lag_one[i] <- last_known[2]
+    future_df$lag_two[i] <- last_known[1]
+  } else if (i == 2) {
+    future_df$lag_one[i] <- future_df$pred[i - 1]  # Use previous prediction
+    future_df$lag_two[i] <- last_known[2]
+  } else {
+    future_df$lag_one[i] <- future_df$pred[i - 1]  # Use previous prediction
+    future_df$lag_two[i] <- future_df$pred[i - 2]  # Use two steps back
+  }
+  
+  # Prepare data for prediction (ensure column names match model)
+  pred_data <- data.frame(
+    YEAR = future_df$YEAR[i],
+    MONTH = future_df$MONTH[i],
+    lag_one = future_df$lag_one[i],
+    lag_two = future_df$lag_two[i]
+  )
+  
+  # Predict using the model
+  future_df$pred[i] <- predict(fit_lm, newdata = pred_data)
+}
+
+p <-
+  future_df %>% 
+  ggplot(aes(x = DATE)) +
+  geom_line(aes(y = pred), color = "steelblue", linewidth = 1) +
+  labs(x = "Date", y = "Temperature") +
+  theme_minimal()
+ggplotly(p)
+```
+
+```{r, echo=FALSE}
+#| html-table-processing: none
+#| label: tbl-model
+#| tbl-cap: "Forecast Metrics of various Models."
+
+library(gt)
+res %>%
+  gt() %>%
+  fmt_number(
+    columns = -error,  # Format all numeric columns except 'error'
+    decimals = 3
+  ) %>%
+  cols_label(
+    error = "Metric",
+    ar = "ARIMA",
+    lm = "Linear Regression",
+    rf = "Random Forest",
+    gp = "Gaussian Process"
+  ) %>%
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = list(
+      cells_column_labels(everything()),
+      cells_body(rows = error == "Accuracy (1 - MAPE)")
+    )
+  )
+```
+
+# Conclusions
 
 This project can be summarised in three main points:
 
@@ -315,6 +471,9 @@ This project can be summarised in three main points:
 -   Brunei is not immune to El Niño effects. Extreme heat in 1998 & 2023 (aligning with global anomalies)
 
 -   May is the hottest month in Brunei.
+
+Limitations:
+
 
 # Acknowledgements
 
